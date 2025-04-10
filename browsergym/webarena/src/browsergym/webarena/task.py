@@ -11,6 +11,7 @@ import playwright.sync_api
 from browsergym.core.task import AbstractBrowserTask
 
 from .instance import WebArenaInstance
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +49,10 @@ class GenericWebArenaTask(AbstractBrowserTask):
             )
 
         # read the list of all webarena task configs
-        import webarena
 
-        all_configs_str = importlib.resources.files(webarena).joinpath("test.raw.json").read_text()
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(current_dir, "..", "..", "..", "data", "test.raw.json")
+        all_configs_str = open(json_path, "r").read()
 
         # substitute URLs
         for pattern, url_key in {
@@ -61,7 +63,7 @@ class GenericWebArenaTask(AbstractBrowserTask):
             "__WIKIPEDIA__": "wikipedia",
             "__MAP__": "map",
         }.items():
-            all_configs_str = all_configs_str.replace(pattern, self.webarena_instance.urls[url_key])
+            all_configs_str = all_configs_str.replace(pattern, self.webarena_instance.urls[url_key].strip("/"))
 
         # load all task configs to JSON
         all_configs = json.loads(all_configs_str)
