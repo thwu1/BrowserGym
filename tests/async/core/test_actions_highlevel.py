@@ -1282,3 +1282,30 @@ async def test_iframe_bid():
         assert checkbox.has_attr("checked")
 
     await env.close()
+
+
+if __name__ == "__main__":
+    # python -m tests.async.core.test_actions_highlevel
+    from ..utils import run_multiple_tests_concurrently
+
+    test_action_parser()
+
+    run_multiple_tests_concurrently(
+        [
+            test_valid_action(),
+            test_invalid_action(),
+            test_click_through_frames(),
+            test_fill_through_iframe(),
+            test_click(),
+            test_hover(),
+            test_fill_type_press(),
+            test_key_press(),
+            test_goto(),
+            test_scroll(),
+            test_tab_actions(),
+            test_mouse_down_up(),
+            test_forced_actions(retry_with_force=True),
+            test_forced_actions(retry_with_force=False),
+            test_iframe_bid(),
+        ]
+    )

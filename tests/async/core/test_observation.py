@@ -9,9 +9,9 @@ import pytest
 import regex as re
 
 # register gym environments
-import browsergym.core
-from browsergym.core.constants import BROWSERGYM_ID_ATTRIBUTE as BID_ATTR
-from browsergym.core.observation import (
+import browsergym.async_core
+from browsergym.async_core.constants import BROWSERGYM_ID_ATTRIBUTE as BID_ATTR
+from browsergym.async_core.observation import (
     _post_extract,
     _pre_extract,
     extract_all_frame_axtrees,
@@ -836,3 +836,35 @@ async def test_tags_to_mark():
             tags_to_mark="fdsjkhjk",
             action_mapping=None,
         )
+
+if __name__ == "__main__":
+    # python -m tests.async.core.test_observation
+    from ..utils import run_multiple_tests_concurrently
+
+    tests = [
+        test_extract_screenshot(),
+        test_extract_axtree_simple(),
+        test_extract_axtree_multi_iframe(),
+        test_extract_dom_simple(),
+        test_extract_dom_multi_iframe(),
+        test_simple_shadowdom(),
+        test_nested_shadowdom(),
+        test_dom_has_bids_no_aria(url=TEST_PAGE),
+        test_dom_has_bids_no_aria(url=MULTI_IFRAME_URL),
+        test_dom_has_bids_no_aria(url=SIMPLE_SHADOW_DOM_URL),
+        test_dom_has_bids_no_aria(url=BASIC_IFRAME_URL),
+        test_dom_has_bids_no_aria(url=BASIC_IFRAME_2_URL),
+        test_dom_has_bids_no_aria(url=INNER_IFRAME_URL),
+        test_dom_has_bids_no_aria(url=OUTER_IFRAME_URL),
+        test_dom_to_text(),
+        test_axtree_to_text(),
+        test_axtree_to_text_remove_redundant(),
+        test_simple_webpage(),
+        test_basic_iframe_webpage(),
+        # test_filter_visible_only(),
+        test_extract_focused_element_bid_through_iframes(),
+        test_extract_focused_element_bid_through_shadowdom(),
+        test_tags_to_mark(),
+
+    ]
+    run_multiple_tests_concurrently(tests)
