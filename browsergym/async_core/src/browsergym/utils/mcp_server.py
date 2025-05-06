@@ -10,8 +10,8 @@ from typing import Callable
 import gymnasium as gym
 from mcp.server.fastmcp import FastMCP
 
-from browsergym.core.action.highlevel import ACTION_SUBSETS, HighLevelActionSet
-from browsergym.core.env import BrowserEnv
+from browsergym.async_core.action.highlevel import ACTION_SUBSETS, HighLevelActionSet
+from browsergym.async_core.env import BrowserEnv
 
 
 @dataclass

@@ -29,6 +29,7 @@ classifiers = [
 ]
 version="0.13.3"
 dependencies = [
+    "browsergym-async-core==0.13.3",
     "browsergym-core==0.13.3",
     "browsergym-miniwob==0.13.3",
     "browsergym-webarena==0.13.3",

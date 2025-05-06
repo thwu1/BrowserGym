@@ -371,20 +371,20 @@ document.addEventListener("visibilitychange", () => {
 
         return obs, info
 
-    def pre_step(self) -> tuple[dict[str, Any], Callable, Callable]:
+    async def pre_step(self) -> tuple[dict[str, Any], Callable, Callable]:
         info = {}
         info["action_exec_start"] = time.time()
         info["action_exec_timeout"] = 0
 
-        def send_message_to_user(text: str):
+        async def send_message_to_user(text: str):
             if not isinstance(text, str):
                 raise ValueError(f"Forbidden value: {text} is not a string")
-            self.chat.add_message(role="assistant", msg=text)
+            await self.chat.add_message(role="assistant", msg=text)
 
-        def report_infeasible_instructions(reason: str):
+        async def report_infeasible_instructions(reason: str):
             if not isinstance(reason, str):
                 raise ValueError(f"Forbidden value: {reason} is not a string")
-            self.chat.add_message(role="infeasible", msg=reason)
+            await self.chat.add_message(role="infeasible", msg=reason)
             self.infeasible_message_received = True
 
         # try to execute the action
@@ -405,14 +405,17 @@ document.addEventListener("visibilitychange", () => {
             truncated: whether the episode is truncated or not
             info: additional information about the step
         """
+        # logger.info(f"Stepping with action: {action}")
         self.last_action = action
-        info, send_message_to_user, report_infeasible_instructions = self.pre_step()
+        info, send_message_to_user, report_infeasible_instructions = await self.pre_step()
+        # logger.info(f"Pre step done")
         try:
             if self.action_mapping:
                 code = self.action_mapping(action)
             else:
                 code = action
-            execute_python_code(
+            # logger.info(f"Executing code: {code}")
+            await execute_python_code(
                 code,
                 self.page,
                 send_message_to_user=send_message_to_user,
@@ -524,7 +527,7 @@ document.addEventListener("visibilitychange", () => {
                 except playwright.async_api.Error:
                     pass
 
-    def _activate_page_from_js(self, page: playwright.sync_api.Page):
+    def _activate_page_from_js(self, page: playwright.async_api.Page):
         logger.debug(f"_activate_page_from_js(page) called, page={str(page)}")
         if not page.context == self.context:
             raise RuntimeError(
@@ -570,7 +573,9 @@ document.addEventListener("visibilitychange", () => {
         for retries_left in reversed(range(EXTRACT_OBS_MAX_TRIES)):
             try:
                 # pre-extraction, mark dom elements (set bid, set dynamic attributes like value and checked)
-                await _pre_extract(self.page, tags_to_mark=self.tags_to_mark, lenient=(retries_left == 0))
+                await _pre_extract(
+                    self.page, tags_to_mark=self.tags_to_mark, lenient=(retries_left == 0)
+                )
 
                 dom = await extract_dom_snapshot(self.page)
                 axtree = await extract_merged_axtree(self.page)
@@ -609,7 +614,9 @@ document.addEventListener("visibilitychange", () => {
                 copy.deepcopy(self.goal_object)
             ),  # new goal format, list of messages openai style
             "open_pages_urls": tuple(page.url for page in self.context.pages),
-            "open_pages_titles": tuple(await asyncio.gather(*[page.title() for page in self.context.pages])),
+            "open_pages_titles": tuple(
+                await asyncio.gather(*[page.title() for page in self.context.pages])
+            ),
             "active_page_index": np.asarray([self.context.pages.index(self.page)]),
             "url": self.page.url,  # redundant with "open_pages_urls" and "active_page_index"
             "screenshot": await extract_screenshot(self.page),

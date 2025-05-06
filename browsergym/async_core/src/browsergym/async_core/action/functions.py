@@ -1,7 +1,6 @@
-
 # all these symbols will be available in browsergym actions
 from typing import Literal
-
+import contextvars
 import playwright.async_api
 
 from .utils import (
@@ -12,11 +11,17 @@ from .utils import (
     smooth_move_visual_cursor_to,
 )
 
-page: playwright.async_api.Page = None
-send_message_to_user: callable = None
-report_infeasible_instructions: callable = None
-demo_mode: Literal["off", "default", "all_blue", "only_visible_elements"] = None
-retry_with_force: bool = False
+page_ctx: contextvars.ContextVar[playwright.async_api.Page] = contextvars.ContextVar("page")
+send_message_to_user_ctx: contextvars.ContextVar[callable] = contextvars.ContextVar(
+    "send_message_to_user"
+)
+report_infeasible_instructions_ctx: contextvars.ContextVar[callable] = contextvars.ContextVar(
+    "report_infeasible_instructions"
+)
+demo_mode_ctx: contextvars.ContextVar[
+    Literal["off", "default", "all_blue", "only_visible_elements"]
+] = contextvars.ContextVar("demo_mode")
+retry_with_force_ctx: contextvars.ContextVar[bool] = contextvars.ContextVar("retry_with_force")
 
 """IMPORTANT
 The following primitives are meant to be included in the browsergym action using
@@ -31,7 +36,7 @@ async def send_msg_to_user(text: str):
     Examples:
         send_msg_to_user("Based on the results of my search, the city was built in 1751.")
     """
-    send_message_to_user(text)
+    send_message_to_user_ctx.get().__call__(text)
 
 
 async def report_infeasible(reason: str):
@@ -41,7 +46,7 @@ async def report_infeasible(reason: str):
     Examples:
         report_infeasible("I cannot follow these instructions because there is no email field in this form.")
     """
-    report_infeasible_instructions(reason)
+    report_infeasible_instructions_ctx.get().__call__(reason)
 
 
 async def noop(wait_ms: float = 1000):
@@ -52,7 +57,7 @@ async def noop(wait_ms: float = 1000):
         noop()
         noop(500)
     """
-    await page.wait_for_timeout(wait_ms)
+    await page_ctx.get().wait_for_timeout(wait_ms)
 
 
 # https://playwright.dev/docs/input#text-input
@@ -66,6 +71,9 @@ async def fill(bid: str, value: str):
         fill('45', "multi-line\\nexample")
         fill('a12', "example with \\"quotes\\"")
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=False)
 
@@ -88,6 +96,9 @@ async def check(bid: str):
     Examples:
         check('55')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=True)
 
@@ -105,6 +116,9 @@ async def uncheck(bid: str):
     Examples:
         uncheck('a5289')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=True)
 
@@ -124,6 +138,9 @@ async def select_option(bid: str, options: str | list[str]):
         select_option('a48', "blue")
         select_option('c48', ["red", "green", "blue"])
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=False)
 
@@ -147,6 +164,9 @@ async def click(
         click('b22', button="right")
         click('48', button="middle", modifiers=["Shift"])
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=True)
 
@@ -170,6 +190,9 @@ async def dblclick(
         dblclick('ca42', button="right")
         dblclick('178', button="middle", modifiers=["Shift"])
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=True)
 
@@ -187,6 +210,9 @@ async def hover(bid: str):
     Examples:
         hover('b8')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
+    retry_with_force = retry_with_force_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(
         page, elem, bid, demo_mode=demo_mode, move_cursor=True, highlight_box=False
@@ -216,6 +242,8 @@ async def press(bid: str, key_comb: str):
         press('a26', 'ControlOrMeta+a')
         press('a61', 'Meta+Shift+t')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=False)
     await elem.press(key_comb, timeout=500)
@@ -229,6 +257,8 @@ async def focus(bid: str):
     Examples:
         focus('b455')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=False)
     await elem.focus(timeout=500)
@@ -242,6 +272,8 @@ async def clear(bid: str):
     Examples:
         clear('996')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=False)
     await elem.clear(timeout=500)
@@ -257,6 +289,8 @@ async def drag_and_drop(from_bid: str, to_bid: str):
     Examples:
         drag_and_drop('56', '498')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     from_elem = await get_elem_by_bid(page, from_bid, demo_mode != "off")
     await add_demo_mode_effects(page, from_elem, from_bid, demo_mode=demo_mode, move_cursor=True)
     await from_elem.hover(timeout=500)
@@ -277,6 +311,7 @@ async def scroll(delta_x: float, delta_y: float):
         scroll(0, 200)
         scroll(-50.2, -100.5)
     """
+    page = page_ctx.get()
     await page.mouse.wheel(delta_x, delta_y)
 
 
@@ -289,6 +324,8 @@ async def mouse_move(x: float, y: float):
     Examples:
         mouse_move(65.2, 158.5)
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
     await page.mouse.move(x, y)
@@ -304,6 +341,8 @@ async def mouse_up(x: float, y: float, button: Literal["left", "middle", "right"
         mouse_up(250, 120)
         mouse_up(47, 252, 'right')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
         await highlight_by_box(page, {"x": x, "y": y, "width": 1, "height": 1})
@@ -321,6 +360,8 @@ async def mouse_down(x: float, y: float, button: Literal["left", "middle", "righ
         mouse_down(140.2, 580.1)
         mouse_down(458, 254.5, 'middle')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
         await highlight_by_box(page, {"x": x, "y": y, "width": 1, "height": 1})
@@ -338,6 +379,8 @@ async def mouse_click(x: float, y: float, button: Literal["left", "middle", "rig
         mouse_click(887.2, 68)
         mouse_click(56, 712.56, 'right')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
         await highlight_by_box(page, {"x": x, "y": y, "width": 1, "height": 1})
@@ -354,6 +397,8 @@ async def mouse_dblclick(x: float, y: float, button: Literal["left", "middle", "
         mouse_dblclick(5, 236)
         mouse_dblclick(87.5, 354, 'right')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
         await highlight_by_box(page, {"x": x, "y": y, "width": 1, "height": 1})
@@ -369,6 +414,8 @@ async def mouse_drag_and_drop(from_x: float, from_y: float, to_x: float, to_y: f
     Examples:
         mouse_drag_and_drop(10.7, 325, 235.6, 24.54)
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         x, y = from_x, from_y
         await smooth_move_visual_cursor_to(page, x, y)
@@ -402,6 +449,7 @@ async def keyboard_press(key: str):
         keyboard_press('Meta+Shift+t')
         page.keyboard.press("PageDown")
     """
+    page = page_ctx.get()
     await page.keyboard.press(key)
 
 
@@ -420,6 +468,7 @@ async def keyboard_up(key: str):
         keyboard_up('Shift')
         keyboard_up('c')
     """
+    page = page_ctx.get()
     await page.keyboard.up(key)
 
 
@@ -437,6 +486,7 @@ async def keyboard_down(key: str):
         keyboard_up('Shift')
         keyboard_up('c')
     """
+    page = page_ctx.get()
     await page.keyboard.down(key)
 
 
@@ -450,6 +500,8 @@ async def keyboard_type(text: str):
     Examples:
         keyboard_type('Hello world!')
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         delay = max(2000 / len(text), 10)
     else:
@@ -468,6 +520,7 @@ async def keyboard_insert_text(text: str):
     Examples:
         keyboard_insert_text('Hello world!')
     """
+    page = page_ctx.get()
     await page.keyboard.insert_text(text)
 
 
@@ -479,6 +532,7 @@ async def goto(url: str):
     Examples:
         goto('http://www.example.com')
     """
+    page = page_ctx.get()
     await page.goto(url)
 
 
@@ -490,6 +544,7 @@ async def go_back():
     Examples:
         go_back()
     """
+    page = page_ctx.get()
     await page.go_back()
 
 
@@ -501,6 +556,7 @@ async def go_forward():
     Examples:
         go_forward()
     """
+    page = page_ctx.get()
     await page.go_forward()
 
 
@@ -512,7 +568,7 @@ async def new_tab():
     Examples:
         new_tab()
     """
-    global page
+    page = page_ctx.get()
     # set the new page as the active page
     page = await page.context.new_page()
     # trigger the callback that sets this page as active in browsergym
@@ -525,6 +581,7 @@ const event = new Event('pageshow', {
 window.dispatchEvent(event);
 """
     )
+    page_ctx.set(page)
 
 
 # https://playwright.dev/python/docs/api/class-page#page-close
@@ -535,7 +592,7 @@ async def tab_close():
     Examples:
         tab_close()
     """
-    global page
+    page = page_ctx.get()
     context = page.context
     await page.close()
     # set most recent page as active page, or open a new page if needed
@@ -554,6 +611,7 @@ const event = new Event('pageshow', {
 window.dispatchEvent(event);
 """
     )
+    page_ctx.set(page)
 
 
 # https://playwright.dev/python/docs/api/class-page#page-bring-to-front
@@ -564,7 +622,8 @@ async def tab_focus(index: int):
     Examples:
         tab_focus(2)
     """
-    global page  # set the focused page as the active page
+    # global page  # set the focused page as the active page
+    page = page_ctx.get()
     page = page.context.pages[index]
     await page.bring_to_front()
     # trigger the callback that sets this page as active in browsergym
@@ -577,6 +636,7 @@ const event = new Event('pageshow', {
 window.dispatchEvent(event);
 """
     )
+    page_ctx.set(page)
 
 
 # https://playwright.dev/python/docs/input#upload-files
@@ -591,6 +651,8 @@ async def upload_file(bid: str, file: str | list[str]):
         upload_file("572", "my_receipt.pdf")
         upload_file("63", ["/home/bob/Documents/image.jpg", "/home/bob/Documents/file.zip"])
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     elem = await get_elem_by_bid(page, bid, demo_mode != "off")
     await add_demo_mode_effects(page, elem, bid, demo_mode=demo_mode, move_cursor=True)
 
@@ -613,6 +675,8 @@ async def mouse_upload_file(x: float, y: float, file: str | list[str]):
         mouse_upload_file(132.1, 547, "my_receipt.pdf")
         mouse_upload_file(328, 812, ["/home/bob/Documents/image.jpg", "/home/bob/Documents/file.zip"])
     """
+    page = page_ctx.get()
+    demo_mode = demo_mode_ctx.get()
     if demo_mode != "off":
         await smooth_move_visual_cursor_to(page, x, y)
         await highlight_by_box(page, {"x": x, "y": y, "width": 1, "height": 1})

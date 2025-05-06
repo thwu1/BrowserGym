@@ -328,42 +328,41 @@ class HighLevelActionSet(AbstractActionSet):
 
         # parse the actions and build the action space
         self.action_set: dict[str, HighLevelAction] = {}
-        self.python_includes = ""
+        self.python_includes = f"""\
+# OVERRIDE_RETRY_WITH_FORCE={repr(retry_with_force)}\n
+"""
 
         # include playwright imports
-        self.python_includes += f"""\
-import playwright.sync_api
-from typing import Literal
+        #         self.python_includes += f"""\
+        # import playwright.async_api
+        # from typing import Literal
 
-
-"""
+        # """
         # set demo_mode and retry_with_force flags
-        self.python_includes += f"""\
-demo_mode={repr(demo_mode)}
-retry_with_force={repr(retry_with_force)}
+        # self.python_includes += f"""\
+        # # demo_mode={repr(demo_mode)}
+        # retry_with_force={repr(retry_with_force)}
 
-if demo_mode is None:
-    demo_mode = "default" if DEMO_MODE else "off"
+        # #if demo_mode is None:
+        # #    demo_mode = "default" if DEMO_MODE else "off"
 
-"""
+        # """
 
         # include utility functions
-        for _, func in inspect.getmembers(utils, inspect.isfunction):
-            self.python_includes += f"""\
-{inspect.getsource(func)}
+        #         for _, func in inspect.getmembers(utils, inspect.isfunction):
+        #             self.python_includes += f"""\
+        # {inspect.getsource(func)}
 
-
-"""
+        # """
 
         # parse and include action functions
         for func in allowed_actions:
 
-            # include action function definition in the code
-            self.python_includes += f"""\
-{inspect.getsource(func)}
+            #             # include action function definition in the code
+            #             self.python_includes += f"""\
+            # {inspect.getsource(func)}
 
-
-"""
+            # """
 
             # extract action signature
             signature = f"{func.__name__}{inspect.signature(func)}"
@@ -508,7 +507,11 @@ Only a single action can be provided at once."""
             if function_name not in self.action_set:
                 raise NameError(f"Invalid action type '{function_name}'.")
             python_code += (
-                function_name + "(" + ", ".join([repr(arg) for arg in function_args]) + ")\n"
+                "await "
+                + function_name
+                + "("
+                + ", ".join([repr(arg) for arg in function_args])
+                + ")\n"
             )
 
         # return the constructed python code

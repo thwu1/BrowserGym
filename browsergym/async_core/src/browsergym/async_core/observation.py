@@ -508,7 +508,11 @@ async def extract_merged_axtree(page: playwright.async_api.Page):
         for node in ax_tree["nodes"]:
             if node["role"]["value"] == "Iframe":
                 frame_id = (
-                    await cdp.send("DOM.describeNode", {"backendNodeId": node["backendDOMNodeId"]})
+                    (
+                        await cdp.send(
+                            "DOM.describeNode", {"backendNodeId": node["backendDOMNodeId"]}
+                        )
+                    )
                     .get("node", {})
                     .get("frameId", None)
                 )
