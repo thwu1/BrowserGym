@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-import playwright.sync_api
+import playwright.async_api
 import requests
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ class WebArenaInstance:
                     f'WebArena site "{site}" ({url}) is not reacheable. Please check the URL.'
                 )
 
-    def ui_login(self, site: str, page: playwright.sync_api.Page):
+    async def ui_login(self, site: str, page: playwright.async_api.Page):
         """
         Should only be called once per site (expects user to be logged out).
         """
@@ -161,54 +161,54 @@ class WebArenaInstance:
         url = self.urls[site]
 
         # open a new page (tab) to perform the login
-        page = page.context.new_page()
+        page = await page.context.new_page()
 
         match site:
             case "reddit":
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(f"{url}")
-                page.get_by_role("link", name="Log in").click()
-                page.get_by_label("Username").fill(username)
-                page.get_by_label("Password").fill(password)
-                page.get_by_role("button", name="Log in").click()
+                await page.goto(f"{url}")
+                await page.get_by_role("link", name="Log in").click()
+                await page.get_by_label("Username").fill(username)
+                await page.get_by_label("Password").fill(password)
+                await page.get_by_role("button", name="Log in").click()
 
             case "gitlab":
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(f"{url}/users/sign_in")
-                page.get_by_label("Username or email").fill(username)
-                page.get_by_label("Password").fill(password)
-                page.get_by_role("button", name="Sign in").click()
+                await page.goto(f"{url}/users/sign_in")
+                await page.get_by_label("Username or email").fill(username)
+                await page.get_by_label("Password").fill(password)
+                await page.get_by_role("button", name="Sign in").click()
 
             case "shopping":
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(f"{url}/customer/account/login/")
-                page.get_by_label("Email", exact=True).fill(username)
-                page.get_by_label("Password", exact=True).fill(password)
-                page.get_by_role("button", name="Sign In").click()
+                await page.goto(f"{url}/customer/account/login/")
+                await page.get_by_label("Email", exact=True).fill(username)
+                await page.get_by_label("Password", exact=True).fill(password)
+                await page.get_by_role("button", name="Sign In").click()
 
             case "shopping_admin":
                 username = self.credentials[site]["username"]
                 password = self.credentials[site]["password"]
 
-                page.goto(url)
-                page.get_by_label("Username").fill(username)
-                page.get_by_label("Password").fill(password)
-                page.get_by_role("button", name="Sign in").click()
+                await page.goto(url)
+                await page.get_by_label("Username").fill(username)
+                await page.get_by_label("Password").fill(password)
+                await page.get_by_role("button", name="Sign in").click()
 
             case "wikipedia":
-                page.goto(url)
+                await page.goto(url)
 
             case "map":
-                page.goto(url)
+                await page.goto(url)
 
             case _:
                 raise ValueError
 
         # release login page
-        page.close()
+        await page.close()
