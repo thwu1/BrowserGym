@@ -36,7 +36,7 @@ async def send_msg_to_user(text: str):
     Examples:
         send_msg_to_user("Based on the results of my search, the city was built in 1751.")
     """
-    send_message_to_user_ctx.get().__call__(text)
+    await send_message_to_user_ctx.get().__call__(text)
 
 
 async def report_infeasible(reason: str):
@@ -46,7 +46,7 @@ async def report_infeasible(reason: str):
     Examples:
         report_infeasible("I cannot follow these instructions because there is no email field in this form.")
     """
-    report_infeasible_instructions_ctx.get().__call__(reason)
+    await report_infeasible_instructions_ctx.get().__call__(reason)
 
 
 async def noop(wait_ms: float = 1000):

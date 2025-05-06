@@ -528,7 +528,6 @@ document.addEventListener("visibilitychange", () => {
                     pass
 
     def _activate_page_from_js(self, page: playwright.async_api.Page):
-        logger.debug(f"_activate_page_from_js(page) called, page={str(page)}")
         if not page.context == self.context:
             raise RuntimeError(
                 f"Unexpected: activating a page that belongs to a different browser context ({page})."
@@ -597,7 +596,7 @@ document.addEventListener("visibilitychange", () => {
                     )
                     # post-extract cleanup (ARIA attributes)
                     await _post_extract(self.page)
-                    time.sleep(0.5)
+                    await asyncio.sleep(0.5)
                     continue
                 else:
                     raise e

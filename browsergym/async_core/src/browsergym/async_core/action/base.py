@@ -101,6 +101,10 @@ async def execute_python_code(
 
         # Continue with execution...
         namespace = _ACTION_EXEC_MODULE.__dict__.copy()
+
+        if "page." in code:  # handle edge case if the code directly use page
+            namespace["page"] = page
+
         wrapped_code = f"""
 async def __user_code_main__():
 {textwrap.indent(code, '    ')}
@@ -109,6 +113,7 @@ async def __user_code_main__():
 __user_code_result__ = __user_code_main__()
 """
         exec(wrapped_code, namespace)
+        # print(f"Executing code {wrapped_code} in namespace {namespace}")
         await namespace["__user_code_result__"]
 
     # Run the execution in the isolated context
