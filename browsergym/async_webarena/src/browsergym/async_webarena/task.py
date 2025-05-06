@@ -9,6 +9,7 @@ import numpy as np
 import playwright.async_api
 
 from browsergym.async_core.task import AbstractBrowserTask
+from browsergym.async_webarena.evaluation_harness.evaluators import evaluator_router
 
 from .instance import WebArenaInstance
 import os
@@ -63,7 +64,9 @@ class GenericWebArenaTask(AbstractBrowserTask):
             "__WIKIPEDIA__": "wikipedia",
             "__MAP__": "map",
         }.items():
-            all_configs_str = all_configs_str.replace(pattern, self.webarena_instance.urls[url_key].strip("/"))
+            all_configs_str = all_configs_str.replace(
+                pattern, self.webarena_instance.urls[url_key].strip("/")
+            )
 
         # load all task configs to JSON
         all_configs = json.loads(all_configs_str)
@@ -88,9 +91,6 @@ class GenericWebArenaTask(AbstractBrowserTask):
         self.task_configs = task_configs
 
     async def setup(self, page: playwright.async_api.Page) -> tuple[str, dict]:
-        # import webarena on instanciation
-        from webarena.evaluation_harness.evaluators import evaluator_router
-
         # pick a task at random
         self.config = self.random.choice(self.task_configs)
 
@@ -185,7 +185,7 @@ If you believe the task is impossible to complete, provide the answer "N/A".
 
         # call the evaluator
         try:
-            score = self.evaluator(
+            score = await self.evaluator(
                 trajectory=trajectory,
                 config_file=self.config_file,
                 page=page,
