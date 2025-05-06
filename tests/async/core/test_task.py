@@ -1,10 +1,11 @@
 from typing import Tuple
 
-import playwright
+import playwright.async_api
 import pytest
 
-from browsergym.core.env import BrowserEnv
-from browsergym.core.task import AbstractBrowserTask
+from browsergym.async_core.env import BrowserEnv
+from browsergym.async_core.task import AbstractBrowserTask
+import asyncio
 
 
 class MockImageGoalTask(AbstractBrowserTask):
@@ -30,15 +31,15 @@ class MockImageGoalTask(AbstractBrowserTask):
             },
         ]
 
-    def setup(self, page: playwright.sync_api.Page) -> tuple[str, dict]:
-        page.goto(self.start_url, timeout=10000)
+    async def setup(self, page: playwright.async_api.Page) -> tuple[str, dict]:
+        await page.goto(self.start_url, timeout=10000)
         return self.goal, {}
 
-    def teardown(self) -> None:
+    async def teardown(self) -> None:
         pass
 
-    def validate(
-        self, page: playwright.sync_api.Page, chat_messages: list[str]
+    async def validate(
+        self, page: playwright.async_api.Page, chat_messages: list[str]
     ) -> Tuple[float, bool, str, dict]:
         reward, done, msg, info = 0, False, "", {}
 
@@ -50,9 +51,9 @@ class MockImageGoalTask(AbstractBrowserTask):
         return reward, done, msg, info
 
 
-def test_mock_image_goal_task():
+async def test_mock_image_goal_task():
     env = BrowserEnv(MockImageGoalTask)
-    obs, _ = env.reset()
+    obs, _ = await env.reset()
 
     assert "goal_object" in obs
     assert len(obs["goal_object"]) == 2
@@ -60,14 +61,14 @@ def test_mock_image_goal_task():
     assert obs["goal_object"][0]["text"] == "This is a mock task with an image goal."
     assert obs["goal_object"][1]["type"] == "image_url"
 
-    env.chat.add_message("user", "exit")
-    obs, reward, terminated, _, _ = env.step("send_msg_to_user('bye')")
+    await env.chat.add_message("user", "exit")
+    obs, reward, terminated, _, _ = await env.step("send_msg_to_user('bye')")
 
     assert reward == 0
     assert terminated is True
 
-    env.close()
+    await env.close()
 
 
 if __name__ == "__main__":
-    test_mock_image_goal_task()
+    asyncio.run(test_mock_image_goal_task())

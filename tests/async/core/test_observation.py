@@ -42,20 +42,21 @@ MULTI_IFRAME_URL = f"file://{__DATA_DIR}/basic_iframe_site/basic_iframe_2.html"
 
 
 @pytest.mark.skip(reason="TODO: how to get the final viewport size right?")
-def test_extract_screenshot():
+async def test_extract_screenshot():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    _pre_extract(env.unwrapped.page)
-    screenshot = extract_screenshot(env.unwrapped.page)
-    _post_extract(env.unwrapped.page)
+    await _pre_extract(env.unwrapped.page)
+    screenshot = await extract_screenshot(env.unwrapped.page)
+    await _post_extract(env.unwrapped.page)
 
     # 3D array (height, width, rgb) of unsigned bytes (between 0 and 255)
     assert isinstance(screenshot, np.ndarray)
@@ -65,47 +66,49 @@ def test_extract_screenshot():
     assert screenshot.shape[2] == 3  # RGB
     assert screenshot.dtype == np.uint8
 
-    env.close()
+    await env.close()
 
 
-def test_extract_axtree_simple():
+async def test_extract_axtree_simple():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    _pre_extract(env.unwrapped.page)
-    all_frame_axtrees = extract_all_frame_axtrees(env.unwrapped.page)
-    merged_axtree = extract_merged_axtree(env.unwrapped.page)
-    _post_extract(env.unwrapped.page)
+    await _pre_extract(env.unwrapped.page)
+    all_frame_axtrees = await extract_all_frame_axtrees(env.unwrapped.page)
+    merged_axtree = await extract_merged_axtree(env.unwrapped.page)
+    await _post_extract(env.unwrapped.page)
 
     # single frame
     assert len(all_frame_axtrees) == 1
     assert len(next(iter(all_frame_axtrees.values()))["nodes"]) == len(merged_axtree["nodes"])
 
-    env.close()
+    await env.close()
 
 
-def test_extract_axtree_multi_iframe():
+async def test_extract_axtree_multi_iframe():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": MULTI_IFRAME_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    _pre_extract(env.unwrapped.page)
-    all_frame_axtrees = extract_all_frame_axtrees(env.unwrapped.page)
-    merged_axtree = extract_merged_axtree(env.unwrapped.page)
-    _post_extract(env.unwrapped.page)
+    await _pre_extract(env.unwrapped.page)
+    all_frame_axtrees = await extract_all_frame_axtrees(env.unwrapped.page)
+    merged_axtree = await extract_merged_axtree(env.unwrapped.page)
+    await _post_extract(env.unwrapped.page)
 
     # multiple frames
     assert len(all_frame_axtrees) == 3
@@ -117,125 +120,129 @@ def test_extract_axtree_multi_iframe():
 
     assert n_nodes == len(merged_axtree["nodes"])
 
-    env.close()
+    await env.close()
 
 
-def test_extract_dom_simple():
+async def test_extract_dom_simple():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    _pre_extract(env.unwrapped.page)
-    dom_snapshot = extract_dom_snapshot(env.unwrapped.page)
-    _post_extract(env.unwrapped.page)
+    await _pre_extract(env.unwrapped.page)
+    dom_snapshot = await extract_dom_snapshot(env.unwrapped.page)
+    await _post_extract(env.unwrapped.page)
 
     # single frame
     assert len(dom_snapshot["documents"]) == 1
 
-    env.close()
+    await env.close()
 
 
-def test_extract_dom_multi_iframe():
+async def test_extract_dom_multi_iframe():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": MULTI_IFRAME_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    _pre_extract(env.unwrapped.page)
-    dom_snapshot = extract_dom_snapshot(env.unwrapped.page)
-    _post_extract(env.unwrapped.page)
+    await _pre_extract(env.unwrapped.page)
+    dom_snapshot = await extract_dom_snapshot(env.unwrapped.page)
+    await _post_extract(env.unwrapped.page)
 
     # multiple frames
     assert len(dom_snapshot["documents"]) == 3
 
-    env.close()
+    await env.close()
 
 
-def test_simple_shadowdom():
+async def test_simple_shadowdom():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": SIMPLE_SHADOW_DOM_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     # retrieve an input element inside the shadowDOM
     elem = env.unwrapped.page.get_by_placeholder("Level 1.1 Text Field 1")
-    assert elem.count() == 1
+    assert await elem.count() == 1
 
     # elem should have a browsergym_id in its BID_ATTR attribute
-    elem_id = elem.get_attribute(BID_ATTR)
+    elem_id = await elem.get_attribute(BID_ATTR)
     assert elem_id is not None
 
     # elem should not have an aria-description (it should have been cleaned)
-    aria_description = elem.get_attribute("aria-description")
+    aria_description = await elem.get_attribute("aria-description")
     assert aria_description is None
 
     # elem should not have an aria-roledescription (it should have been cleaned)
-    aria_roledescription = elem.get_attribute("aria-roledescription")
+    aria_roledescription = await elem.get_attribute("aria-roledescription")
     assert aria_roledescription is None
 
     # check that elem can be retrieved correctly using its browsergym_id
     elem2 = env.unwrapped.page.get_by_test_id(elem_id)
-    assert elem2.count() == 1
-    assert env.unwrapped.page.evaluate(
+    assert await elem2.count() == 1
+    assert await env.unwrapped.page.evaluate(
         "([node1, node2]) => {return node1.isEqualNode(node2);}",
-        [elem.element_handle(), elem2.element_handle()],
+        [await elem.element_handle(), await elem2.element_handle()],
     )
 
-    env.close()
+    await env.close()
 
 
-def test_nested_shadowdom():
+async def test_nested_shadowdom():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": SHADOW_DOM_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     # retrieve an input element inside the nested shadowDOM
     elem = env.unwrapped.page.get_by_placeholder("Level 2.4 Text Field 2")
-    assert elem.count() == 1
+    assert await elem.count() == 1
 
     # elem should have a browsergym_id in its BID_ATTR attribute
-    elem_id = elem.get_attribute(BID_ATTR)
+    elem_id = await elem.get_attribute(BID_ATTR)
     assert elem_id is not None
 
     # elem should not have an aria-description (it should have been cleaned)
-    aria_description = elem.get_attribute("aria-description")
+    aria_description = await elem.get_attribute("aria-description")
     assert aria_description is None
 
     # elem should not have an aria-roledescription (it should have been cleaned)
-    aria_roledescription = elem.get_attribute("aria-roledescription")
+    aria_roledescription = await elem.get_attribute("aria-roledescription")
     assert aria_roledescription is None
 
     # check that elem can be retrieved correctly using its browsergym_id
     elem2 = env.unwrapped.page.get_by_test_id(elem_id)
-    assert elem2.count() == 1
-    assert env.unwrapped.page.evaluate(
+    assert await elem2.count() == 1
+    assert await env.unwrapped.page.evaluate(
         "([node1, node2]) => {return node1.isEqualNode(node2);}",
-        [elem.element_handle(), elem2.element_handle()],
+        [await elem.element_handle(), await elem2.element_handle()],
     )
 
-    env.close()
+    await env.close()
 
 
 @pytest.mark.parametrize(
@@ -250,16 +257,17 @@ def test_nested_shadowdom():
         OUTER_IFRAME_URL,
     ],
 )
-def test_dom_has_bids_no_aria(url):
+async def test_dom_has_bids_no_aria(url):
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": url},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     # exceptions
     dom_node_names_without_bid = ["html", "#text", "#document", "#comment"]
@@ -326,34 +334,35 @@ def test_dom_has_bids_no_aria(url):
     # check that all browsergym ids are unique
     assert len(bids) == len(set(bids))
 
-    env.close()
+    await env.close()
 
 
-def test_dom_to_text():
+async def test_dom_to_text():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     dom = flatten_dom_to_str(obs["dom_object"])
     assert isinstance(dom, str)
     assert "Subscribe to newsletter" in dom
     assert "Janice" not in dom
 
-    obs, reward, term, trunc, info = env.step(
+    obs, reward, term, trunc, info = await env.step(
         f"""\
-page.get_by_label("Name:").click()
-page.get_by_label("Name:").fill("Janice")
-page.get_by_label("Name:").press("Tab")
-page.get_by_label("Email:").fill("janice@mail.com")
-page.get_by_label("Email:").press("Tab")
-page.get_by_label("Age:", exact=True).fill("21")
-page.get_by_label("Age:", exact=True).press("Tab")
+await page.get_by_label("Name:").click()
+await page.get_by_label("Name:").fill("Janice")
+await page.get_by_label("Name:").press("Tab")
+await page.get_by_label("Email:").fill("janice@mail.com")
+await page.get_by_label("Email:").press("Tab")
+await page.get_by_label("Age:", exact=True).fill("21")
+await page.get_by_label("Age:", exact=True).press("Tab")
 """
     )
 
@@ -417,35 +426,36 @@ page.get_by_label("Age:", exact=True).press("Tab")
     assert "Text within a non-html tag" not in dom
     assert "Text that should not be visible" in dom
 
-    env.close()
+    await env.close()
 
 
-def test_axtree_to_text():
+async def test_axtree_to_text():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     axtree = flatten_axtree_to_str(obs["axtree_object"])
     assert isinstance(axtree, str)
     assert "checkbox 'Subscribe to newsletter', checked='false'" in axtree
     assert "Janice" not in axtree
 
-    obs, reward, term, trunc, info = env.step(
+    obs, reward, term, trunc, info = await env.step(
         f"""\
-page.get_by_label("Name:").click()
-page.get_by_label("Name:").fill("Janice")
-page.get_by_label("Name:").press("Tab")
-page.get_by_label("Email:").fill("janice@mail.com")
-page.get_by_label("Email:").press("Tab")
-page.get_by_label("Age:", exact=True).fill("21")
-page.get_by_label("Age:", exact=True).press("Tab")
-page.get_by_label("Subscribe to newsletter").click()
+await page.get_by_label("Name:").click()
+await page.get_by_label("Name:").fill("Janice")
+await page.get_by_label("Name:").press("Tab")
+await page.get_by_label("Email:").fill("janice@mail.com")
+await page.get_by_label("Email:").press("Tab")
+await page.get_by_label("Age:", exact=True).fill("21")
+await page.get_by_label("Age:", exact=True).press("Tab")
+await page.get_by_label("Subscribe to newsletter").click()
 """
     )
 
@@ -512,19 +522,20 @@ page.get_by_label("Subscribe to newsletter").click()
     assert "Text within a non-html tag" in axtree
     assert "Text that should not be visible" in axtree
 
-    env.close()
+    await env.close()
 
 
-def test_axtree_to_text_remove_redundant():
+async def test_axtree_to_text_remove_redundant():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     axtree = flatten_axtree_to_str(obs["axtree_object"], remove_redundant_static_text=True)
     assert "heading 'Simple Form'" in axtree
@@ -535,25 +546,26 @@ def test_axtree_to_text_remove_redundant():
     assert "StaticText 'Simple Form'" in axtree
 
 
-def test_simple_webpage():
+async def test_simple_webpage():
     """
     In this simple unit test, we make sure the retrieved coordinates of a known element
     are correct, by verifing that the element is checked after clicking on it.
 
     """
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         viewport=__VIEWPORT,
         timeout=__TIMEOUT,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    element = env.unwrapped.page.query_selector('[type="checkbox"]')
+    element = await env.unwrapped.page.query_selector('[type="checkbox"]')
 
-    assert not element.is_checked()
+    assert not await element.is_checked()
 
     soup = bs4.BeautifulSoup(
         flatten_dom_to_str(
@@ -565,23 +577,23 @@ def test_simple_webpage():
     x, y = map(float, ast.literal_eval(input_elem.get("center")))
 
     # click input elem
-    env.unwrapped.page.mouse.click(x, y)
+    await env.unwrapped.page.mouse.click(x, y)
 
-    element = env.unwrapped.page.query_selector('[type="checkbox"]')
+    element = await env.unwrapped.page.query_selector('[type="checkbox"]')
 
-    assert element.is_checked()
+    assert await element.is_checked()
 
-    env.close()
+    await env.close()
 
 
-def test_basic_iframe_webpage():
+async def test_basic_iframe_webpage():
     """
     In this simple unit test, we make sure the retrieved coordinates of a known element
     are correct, by verifing that the element is checked after clicking on it.
 
     """
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": BASIC_IFRAME_2_URL, "goal": "dummy goal"},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
@@ -590,13 +602,14 @@ def test_basic_iframe_webpage():
     )
 
     # click on the checkbox in the main frame
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
-    element = env.unwrapped.page.query_selector('[type="checkbox"]')
+    element = await env.unwrapped.page.query_selector('[type="checkbox"]')
 
-    assert not element.is_checked()
+    assert not await element.is_checked()
 
-    bid = element.get_attribute("bid")
+    bid = await element.get_attribute("bid")
     soup = bs4.BeautifulSoup(
         flatten_dom_to_str(
             obs["dom_object"], obs["extra_element_properties"], with_center_coords=True
@@ -605,17 +618,17 @@ def test_basic_iframe_webpage():
     )
     input_elem = soup.find("input", attrs={"bid": bid})
     x, y = map(float, ast.literal_eval(input_elem.get("center")))
-    env.unwrapped.page.mouse.click(x, y)
+    await env.unwrapped.page.mouse.click(x, y)
 
-    assert element.is_checked()
+    assert await element.is_checked()
 
     # click on the checkbox in the inner_frame
-    obs, _, _, _, _ = env.step("")
-    element = env.unwrapped.page.frames[2].query_selector('[type="checkbox"]')
+    obs, _, _, _, _ = await env.step("")
+    element = await env.unwrapped.page.frames[2].query_selector('[type="checkbox"]')
 
-    assert element.is_checked()  # instantiated as checked
+    assert await element.is_checked()  # instantiated as checked
 
-    bid = element.get_attribute("bid")
+    bid = await element.get_attribute("bid")
     soup = bs4.BeautifulSoup(
         flatten_dom_to_str(
             obs["dom_object"], obs["extra_element_properties"], with_center_coords=True
@@ -624,18 +637,18 @@ def test_basic_iframe_webpage():
     )
     input_elem = soup.find("input", attrs={"bid": bid})
     x, y = map(float, ast.literal_eval(input_elem.get("center")))
-    env.unwrapped.page.mouse.click(x, y)
+    await env.unwrapped.page.mouse.click(x, y)
 
-    assert not element.is_checked()
+    assert not await element.is_checked()
 
     # scroll inside a frame, and click on the checkbox in the inner_frame
-    env.unwrapped.page.frames[1].evaluate("window.scrollTo(0, document.body.scrollHeight);")
-    obs, _, _, _, _ = env.step("")
-    element = env.unwrapped.page.frames[2].query_selector('[type="checkbox"]')
+    await env.unwrapped.page.frames[1].evaluate("window.scrollTo(0, document.body.scrollHeight);")
+    obs, _, _, _, _ = await env.step("")
+    element = await env.unwrapped.page.frames[2].query_selector('[type="checkbox"]')
 
-    assert not element.is_checked()  # instantiated as checked
+    assert not await element.is_checked()  # instantiated as checked
 
-    bid = element.get_attribute("bid")
+    bid = await element.get_attribute("bid")
     soup = bs4.BeautifulSoup(
         flatten_dom_to_str(
             obs["dom_object"], obs["extra_element_properties"], with_center_coords=True
@@ -644,16 +657,16 @@ def test_basic_iframe_webpage():
     )
     input_elem = soup.find("input", attrs={"bid": bid})
     x, y = map(float, ast.literal_eval(input_elem.get("center")))
-    env.unwrapped.page.mouse.click(x, y)
+    await env.unwrapped.page.mouse.click(x, y)
 
-    assert element.is_checked()
-    env.close()
+    assert await element.is_checked()
+    await env.close()
 
 
 @pytest.mark.skip(reason="HTML file seems missing. Deactivating for now.")
-def test_filter_visible_only():
+async def test_filter_visible_only():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CUSTOM_PAGE_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
@@ -663,32 +676,34 @@ def test_filter_visible_only():
     )
 
     # click on the checkbox in the main frame
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
     axtree_txt = flatten_axtree_to_str(obs["axtree_object"], filter_visible_only=True)
     assert "textbox" not in axtree_txt
 
     # scroll on the main frame, then scroll inside a frame to find that hidden textbox element
-    env.unwrapped.page.evaluate(
+    await env.unwrapped.page.evaluate(
         "window.scrollTo(document.body.scrollWidth / 3, document.body.scrollHeight / 3);"
     )
     iframe = env.unwrapped.page.frames[1]
-    iframe.evaluate("window.scrollTo(0, document.body.scrollHeight / 3.5);")
+    await iframe.evaluate("window.scrollTo(0, document.body.scrollHeight / 3.5);")
 
-    obs, _, _, _, _ = env.step("")
+    obs, _, _, _, _ = await env.step("")
     axtree_txt = flatten_axtree_to_str(obs["axtree_object"])
     assert "textbox" in obs["axtree_txt"]
 
 
-def test_extract_focused_element_bid_through_iframes():
+async def test_extract_focused_element_bid_through_iframes():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": MULTI_IFRAME_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
     )
 
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     inner_checkbox = soup.find("input", attrs={"id": "checkbox_2"})
     body = soup.find("body")
@@ -699,7 +714,7 @@ def test_extract_focused_element_bid_through_iframes():
     # click box
     action = f"click({repr(inner_checkbox.get(BID_ATTR))})"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     inner_checkbox = soup.find("input", attrs={"id": "checkbox_2"})
 
@@ -709,19 +724,20 @@ def test_extract_focused_element_bid_through_iframes():
     # focused bid is checkbox
     assert obs["focused_element_bid"] == inner_checkbox.get(BID_ATTR)
 
-    env.close()
+    await env.close()
 
 
-def test_extract_focused_element_bid_through_shadowdom():
+async def test_extract_focused_element_bid_through_shadowdom():
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": SHADOW_DOM_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
     )
 
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     input_elem = soup.find("input", attrs={"name": "level2.4-textfield2"})
     body = soup.find("body")
@@ -732,7 +748,7 @@ def test_extract_focused_element_bid_through_shadowdom():
     # click input elem
     action = f"click({repr(input_elem.get(BID_ATTR))})"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     input_elem = soup.find("input", attrs={"name": "level2.4-textfield2"})
 
@@ -742,21 +758,22 @@ def test_extract_focused_element_bid_through_shadowdom():
     # focused bid is input elem
     assert obs["focused_element_bid"] == input_elem.get(BID_ATTR)
 
-    env.close()
+    await env.close()
 
 
-def test_tags_to_mark():
+async def test_tags_to_mark():
 
     # default value
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     dom = flatten_dom_to_str(obs["dom_object"])
     assert isinstance(dom, str)
@@ -764,11 +781,11 @@ def test_tags_to_mark():
     assert '<nonhtmltag bid="' not in dom
     assert '<p bid="' in dom
 
-    env.close()
+    await env.close()
 
     # standard_html
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
@@ -776,7 +793,8 @@ def test_tags_to_mark():
         tags_to_mark="standard_html",
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     dom = flatten_dom_to_str(obs["dom_object"])
     assert isinstance(dom, str)
@@ -784,11 +802,11 @@ def test_tags_to_mark():
     assert '<nonhtmltag bid="' not in dom
     assert '<p bid="' in dom
 
-    env.close()
+    await env.close()
 
     # all
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEST_PAGE_2},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
@@ -796,7 +814,8 @@ def test_tags_to_mark():
         tags_to_mark="all",
         action_mapping=None,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     dom = flatten_dom_to_str(obs["dom_object"])
     assert isinstance(dom, str)
@@ -804,12 +823,12 @@ def test_tags_to_mark():
     assert '<nonhtmltag bid="' in dom
     assert '<p bid="' in dom
 
-    env.close()
+    await env.close()
 
     # incorrect value
     with pytest.raises(Exception):
         env = gym.make(
-            "browsergym/openended",
+            "browsergym_async/openended",
             task_kwargs={"start_url": TEST_PAGE_2},
             headless=__HEADLESS,
             slow_mo=__SLOW_MO,

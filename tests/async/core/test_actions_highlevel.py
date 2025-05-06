@@ -10,10 +10,10 @@ import pytest
 from pyparsing.exceptions import ParseException
 
 # register openended gym environments
-import browsergym.core
-from browsergym.core.action.highlevel import HighLevelActionSet
-from browsergym.core.action.parsers import NamedArgument, highlevel_action_parser
-from browsergym.core.constants import BROWSERGYM_ID_ATTRIBUTE as BID_ATTR
+import browsergym.async_core
+from browsergym.async_core.action.highlevel import HighLevelActionSet
+from browsergym.async_core.action.parsers import NamedArgument, highlevel_action_parser
+from browsergym.async_core.constants import BROWSERGYM_ID_ATTRIBUTE as BID_ATTR
 from browsergym.utils.obs import flatten_dom_to_str
 
 _IS_MAC_OS = platform.system() == "Darwin"
@@ -109,11 +109,12 @@ def test_action_parser():
     ]
 
 
-def test_valid_action():
+@pytest.mark.asyncio
+async def test_valid_action():
     action_set = HighLevelActionSet()
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
@@ -121,12 +122,14 @@ def test_valid_action():
         action_mapping=action_set.to_python_code,
     )
 
+    env = env.unwrapped
+
     def get_checkbox_elem(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
         checkbox = soup.find("input", attrs={"type": "checkbox", "id": "vehicle1"})
         return checkbox
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     checkbox = get_checkbox_elem(obs)
 
     # box not checked
@@ -140,7 +143,7 @@ click({repr(checkbox.get(BID_ATTR))}, "17" screen")  # typo here
     with pytest.raises(ValueError):
         python_action = action_set.to_python_code(action)
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # error and box not checked
@@ -153,9 +156,9 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 1
+    assert python_action.count("\nawait click(") == 1
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box checked
@@ -169,9 +172,9 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 2
+    assert python_action.count("\nawait click(") == 2
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box still checked
@@ -186,9 +189,9 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box unchecked
@@ -201,9 +204,9 @@ click({repr(checkbox.get(BID_ATTR))}) click({repr(checkbox.get(BID_ATTR))}) clic
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box checked
@@ -221,9 +224,9 @@ click({repr(checkbox.get(BID_ATTR))},   )
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box unchecked
@@ -245,9 +248,9 @@ This is not code, just an explanation
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box checked
@@ -277,9 +280,9 @@ This is not code, just an explanation
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box unchecked
@@ -302,37 +305,40 @@ This is garbage
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nclick(") == 3
+    assert python_action.count("\nawait click(") == 3
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box checked
     assert not obs["last_action_error"]
     assert checkbox.has_attr("checked")
 
-    env.close()
+    await env.close()
 
 
-def test_invalid_action():
+@pytest.mark.asyncio
+async def test_invalid_action():
     action_set = HighLevelActionSet()
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+
+    obs, info = await env.reset()
 
     # click inexistant bid
     action = f"""\
 click("INVALID_BID")
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert "ValueError" in obs["last_action_error"]
@@ -342,7 +348,7 @@ click("INVALID_BID")
 click(None)
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got None"
@@ -352,7 +358,7 @@ click(None)
 click(42.7)
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got 42.7"
@@ -362,7 +368,7 @@ click(42.7)
 click([])
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got []"
@@ -372,7 +378,7 @@ click([])
 click([42, "a", True, None])
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got [42, 'a', True, None]"
@@ -382,7 +388,7 @@ click([42, "a", True, None])
 click({{}})
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got {}"
@@ -392,7 +398,7 @@ click({{}})
 click({{"k": "aaa"}})
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "ValueError: expected a string, got {'k': 'aaa'}"
@@ -402,7 +408,7 @@ click({{"k": "aaa"}})
 click("4", "aa", "bb")
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert obs["last_action_error"] == "Error: Locator.click: modifiers: expected array, got string"
@@ -412,7 +418,7 @@ click("4", "aa", "bb")
 click()
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert (
@@ -425,7 +431,7 @@ click()
 click()
 """
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # error
     assert (
@@ -473,22 +479,23 @@ click
 """
         )
 
-    env.close()
+    await env.close()
 
 
-def test_click_through_frames():
+@pytest.mark.asyncio
+async def test_click_through_frames():
     action_set = HighLevelActionSet()
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": MULTI_IFRAME_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     checkbox = soup.find("input", attrs={"type": "checkbox", "id": "checkbox_2"})
@@ -502,7 +509,7 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # no error
     assert not obs["last_action_error"]
@@ -513,22 +520,23 @@ click({repr(checkbox.get(BID_ATTR))})
     # box not checked
     assert not checkbox.has_attr("checked")
 
-    env.close()
+    await env.close()
 
 
-def test_fill_through_iframe():
+@pytest.mark.asyncio
+async def test_fill_through_iframe():
     action_set = HighLevelActionSet()
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": MULTI_IFRAME_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
     text_input = soup.find(
@@ -544,7 +552,7 @@ fill({repr(text_input.get(BID_ATTR))}, "This is a test value.")
 """
     python_action = action_set.to_python_code(action)
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
 
     # no error
     assert not obs["last_action_error"]
@@ -557,27 +565,29 @@ fill({repr(text_input.get(BID_ATTR))}, "This is a test value.")
     # input filled to desired value
     assert text_input.get("value") == "This is a test value."
 
-    env.close()
+    await env.close()
 
 
-def test_click():
+@pytest.mark.asyncio
+async def test_click():
     action_set = HighLevelActionSet()
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
     def get_checkbox_elem(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
         checkbox = soup.find("input", attrs={"type": "checkbox", "id": "vehicle1"})
         return checkbox
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     checkbox = get_checkbox_elem(obs)
 
     # box not checked
@@ -589,7 +599,7 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # no error
@@ -604,7 +614,7 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # no error
@@ -620,7 +630,7 @@ click({repr(checkbox.get(BID_ATTR))})
 """
     python_action = action_set.to_python_code(action)
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # no error
@@ -629,27 +639,29 @@ click({repr(checkbox.get(BID_ATTR))})
     # box still unchecked
     assert not checkbox.has_attr("checked")
 
-    env.close()
+    await env.close()
 
 
-def test_hover():
+@pytest.mark.asyncio
+async def test_hover():
     action_set = HighLevelActionSet(subsets=["bid", "coord"])
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": HOVER_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
     def get_button_elem(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
         button = soup.find("input", attrs={"type": "button"})
         return button
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     button = get_button_elem(obs)
 
     assert not obs["last_action_error"]
@@ -659,7 +671,7 @@ def test_hover():
 hover({repr(button.get(BID_ATTR))})
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     button = get_button_elem(obs)
 
     assert not obs["last_action_error"]
@@ -669,25 +681,27 @@ hover({repr(button.get(BID_ATTR))})
 mouse_move(0, 0)
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     button = get_button_elem(obs)
 
     assert not obs["last_action_error"]
     assert button.get("value") == "Hover me"
 
-    env.close()
+    await env.close()
 
 
-def test_fill_type_press():
+@pytest.mark.asyncio
+async def test_fill_type_press():
     action_set = HighLevelActionSet(subsets=["bid", "coord"])
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEXT_INPUT_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
     def get_fname_lname_elems(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
@@ -695,7 +709,7 @@ def test_fill_type_press():
         lname = soup.find("input", attrs={"id": "lname"})
         return fname, lname
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     fname, lname = get_fname_lname_elems(obs)
 
     # type using bid
@@ -703,7 +717,7 @@ def test_fill_type_press():
 fill({repr(fname.get(BID_ATTR))}, 'Christian')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -715,7 +729,7 @@ fill({repr(fname.get(BID_ATTR))}, 'Christian')
 fill({repr(lname.get(BID_ATTR))}, 'Clavier')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -727,7 +741,7 @@ fill({repr(lname.get(BID_ATTR))}, 'Clavier')
 focus({repr(fname.get(BID_ATTR))}) keyboard_type('Gérard')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -739,7 +753,7 @@ focus({repr(fname.get(BID_ATTR))}) keyboard_type('Gérard')
 click({repr(lname.get(BID_ATTR))}) keyboard_insert_text('Jugnot')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -751,7 +765,7 @@ click({repr(lname.get(BID_ATTR))}) keyboard_insert_text('Jugnot')
 clear({repr(lname.get(BID_ATTR))}) keyboard_insert_text('Jugnot')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -771,7 +785,7 @@ keyboard_press('Backspace')
 keyboard_insert_text('Gérard')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -783,7 +797,7 @@ keyboard_insert_text('Gérard')
 fill({repr(fname.get(BID_ATTR))}, '')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -795,7 +809,7 @@ fill({repr(fname.get(BID_ATTR))}, '')
 keyboard_type('Jean')
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -806,7 +820,7 @@ keyboard_type('Jean')
     action = f"""
 mouse_click(0, 0)
 """
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
@@ -816,14 +830,14 @@ mouse_click(0, 0)
     action = f"""
 keyboard_type('Reno')
 """
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     fname, lname = get_fname_lname_elems(obs)
 
     assert not obs["last_action_error"]
     assert fname.get("value") == "Jean"
     assert lname.get("value") == "Jugnot"
 
-    env.close()
+    await env.close()
 
 
 @pytest.mark.skip(reason="Not implemented yet")
@@ -832,19 +846,21 @@ def test_dblclick():
 
 
 # copy/paste text using a sequence of keyboard_press actions
-def test_key_press():
+@pytest.mark.asyncio
+async def test_key_press():
     action_set = HighLevelActionSet(subsets=["bid", "coord"])
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": TEXT_INPUT_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
 
     def get_fname_lname_elems(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
@@ -862,7 +878,7 @@ def test_key_press():
     keyboard_press({repr("Meta+v" if _IS_MAC_OS else "Control+v")})
     """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     assert not obs["last_action_error"]
 
@@ -870,22 +886,24 @@ def test_key_press():
 
     assert lname.get("value") == "Christian"
 
-    env.close()
+    await env.close()
 
 
-def test_goto():
+@pytest.mark.asyncio
+async def test_goto():
     url1 = URL_INPUT_URL
     url2 = TEXT_INPUT_URL
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": url1},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
     )
+    env = env.unwrapped
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
 
     assert obs["url"] == url1
 
@@ -893,7 +911,7 @@ def test_goto():
 goto({repr(url2)})
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     assert not obs["last_action_error"]
 
@@ -903,7 +921,7 @@ goto({repr(url2)})
 go_back()
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     assert not obs["last_action_error"]
 
@@ -913,26 +931,28 @@ go_back()
 go_forward()
 """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     assert not obs["last_action_error"]
 
     assert obs["url"] == url2
 
-    env.close()
+    await env.close()
 
 
-def test_scroll():
+@pytest.mark.asyncio
+async def test_scroll():
     action_set = HighLevelActionSet(subsets=["coord"])
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": LONG_PAGE_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
     def extract_coords_from_elem(elem):
         return ast.literal_eval(elem.get("center"))
@@ -948,7 +968,7 @@ def test_scroll():
         bottom = soup.find("input", attrs={"type": "checkbox", "id": "bottom"})
         return top, bottom
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     top, bottom = get_top_bottom_elems(obs)
     top_x, top_y = extract_coords_from_elem(top)
     bottom_x, bottom_y = extract_coords_from_elem(bottom)
@@ -961,7 +981,7 @@ def test_scroll():
     # click top
     action = f"mouse_click({repr(top_x)}, {repr(top_y)})"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     top, bottom = get_top_bottom_elems(obs)
     top_x, top_y = extract_coords_from_elem(top)
@@ -981,7 +1001,7 @@ def test_scroll():
     # click bottom
     action = f"mouse_click({repr(bottom_x)}, {repr(bottom_y)})"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     top, bottom = get_top_bottom_elems(obs)
     top_x, top_y = extract_coords_from_elem(top)
@@ -997,7 +1017,7 @@ def test_scroll():
     # scroll up
     action = f"scroll(0, -500)"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     top, bottom = get_top_bottom_elems(obs)
     prev_top_x, prev_top_y = top_x, top_y
@@ -1015,7 +1035,7 @@ def test_scroll():
     # scroll down
     action = f"scroll(0, 500)"
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
 
     top, bottom = get_top_bottom_elems(obs)
     prev_top_x, prev_top_y = top_x, top_y
@@ -1030,69 +1050,73 @@ def test_scroll():
     assert prev_top_x == top_x and prev_top_y > top_y
     assert prev_bottom_x == bottom_x and prev_bottom_y > bottom_y
 
-    env.close()
+    await env.close()
 
 
-def test_tab_actions():
+@pytest.mark.asyncio
+async def test_tab_actions():
     action_set = HighLevelActionSet(subsets=["tab", "nav"])
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
     assert not obs["last_action_error"]
     assert len(obs["open_pages_urls"]) == 1
     assert len(obs["open_pages_titles"]) == 1
     assert obs["active_page_index"] == 0
     assert obs["open_pages_urls"][obs["active_page_index"][0]] == obs["url"]
 
-    obs, reward, terminated, truncated, info = env.step("new_tab()")
+    obs, reward, terminated, truncated, info = await env.step("new_tab()")
     assert not obs["last_action_error"]
     assert len(obs["open_pages_urls"]) == 2
     assert len(obs["open_pages_titles"]) == 2
     assert obs["active_page_index"] == 1
     assert obs["open_pages_urls"][obs["active_page_index"][0]] == obs["url"]
 
-    obs, reward, terminated, truncated, info = env.step(f"goto({repr(TEXTBOX_URL)})")
+    obs, reward, terminated, truncated, info = await env.step(f"goto({repr(TEXTBOX_URL)})")
     assert not obs["last_action_error"]
     assert len(obs["open_pages_urls"]) == 2
     assert len(obs["open_pages_titles"]) == 2
     assert obs["active_page_index"] == 1
     assert obs["open_pages_urls"][obs["active_page_index"][0]] == obs["url"]
 
-    obs, reward, terminated, truncated, info = env.step("tab_focus(0)")
+    obs, reward, terminated, truncated, info = await env.step("tab_focus(0)")
     assert not obs["last_action_error"]
     assert len(obs["open_pages_urls"]) == 2
     assert len(obs["open_pages_titles"]) == 2
     assert obs["active_page_index"] == 0
     assert obs["open_pages_urls"][obs["active_page_index"][0]] == obs["url"]
 
-    obs, reward, terminated, truncated, info = env.step("tab_close()")
+    obs, reward, terminated, truncated, info = await env.step("tab_close()")
     assert not obs["last_action_error"]
     assert len(obs["open_pages_urls"]) == 1
     assert len(obs["open_pages_titles"]) == 1
     assert obs["active_page_index"] == 0
     assert obs["open_pages_urls"][obs["active_page_index"][0]] == obs["url"]
 
-    env.close()
+    await env.close()
 
 
-def test_mouse_down_up():
+@pytest.mark.asyncio
+async def test_mouse_down_up():
     action_set = HighLevelActionSet(subsets=["bid", "coord"])
 
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
+    env = env.unwrapped
 
     def get_checkbox_elem(obs):
         soup = bs4.BeautifulSoup(
@@ -1104,7 +1128,7 @@ def test_mouse_down_up():
         checkbox = soup.find("input", attrs={"type": "checkbox", "id": "vehicle1"})
         return checkbox
 
-    obs, info = env.reset()
+    obs, info = await env.reset()
     checkbox = get_checkbox_elem(obs)
 
     # box not checked
@@ -1118,9 +1142,9 @@ mouse_click({repr(x)}, {repr(y)})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nmouse_") == 1
+    assert python_action.count("\nawait mouse_") == 1
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box checked
@@ -1137,9 +1161,9 @@ mouse_up({repr(x)}, {repr(y)})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nmouse_") == 4
+    assert python_action.count("\nawait mouse_") == 4
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box not checked
@@ -1158,30 +1182,33 @@ mouse_up({repr(x)}, {repr(y)})
 """
     python_action = action_set.to_python_code(action)
 
-    assert python_action.count("\nmouse_") == 6
+    assert python_action.count("\nawait mouse_") == 6
 
-    obs, reward, term, trunc, info = env.step(action)
+    obs, reward, term, trunc, info = await env.step(action)
     checkbox = get_checkbox_elem(obs)
 
     # box not checked
     assert not obs["last_action_error"]
     assert not checkbox.has_attr("checked")
 
+    await env.close()
+
 
 # test that forced action can click an obstructed element
 @pytest.mark.parametrize("retry_with_force", [True, False])
-def test_forced_actions(retry_with_force):
+@pytest.mark.asyncio
+async def test_forced_actions(retry_with_force):
     action_set = HighLevelActionSet(subsets=["bid"], retry_with_force=retry_with_force)
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": OBSTRUCTED_CHECKBOX_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     def get_checkbox(obs):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
@@ -1194,7 +1221,7 @@ def test_forced_actions(retry_with_force):
     click({repr(checkbox.get(BID_ATTR))})
     """
 
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, reward, terminated, truncated, info = await env.step(action)
     checkbox = get_checkbox(obs)
     if retry_with_force:
         assert not obs["last_action_error"]
@@ -1203,23 +1230,24 @@ def test_forced_actions(retry_with_force):
         assert obs["last_action_error"]
         assert checkbox.has_attr("checked")
 
-    env.close()
+    await env.close()
 
 
 # TODO investigate why it takes ~1sec to mark each frame, although they are very small, and if we can do something about it
 @pytest.mark.slow
-def test_iframe_bid():
+@pytest.mark.asyncio
+async def test_iframe_bid():
     action_set = HighLevelActionSet(subsets=["bid"])
     env = gym.make(
-        "browsergym/openended",
+        "browsergym_async/openended",
         task_kwargs={"start_url": LOTS_OF_IFRAMES_URL},
         headless=__HEADLESS,
         slow_mo=__SLOW_MO,
         timeout=__TIMEOUT,
         action_mapping=action_set.to_python_code,
     )
-
-    obs, info = env.reset()
+    env = env.unwrapped
+    obs, info = await env.reset()
 
     def get_checkbox(obs, i):
         soup = bs4.BeautifulSoup(flatten_dom_to_str(obs["dom_object"]), "lxml")
@@ -1246,11 +1274,11 @@ def test_iframe_bid():
         click({repr(bid)})
         """
 
-        obs, reward, terminated, truncated, info = env.step(action)
+        obs, reward, terminated, truncated, info = await env.step(action)
         assert not obs["last_action_error"]
 
         # checkbox should get checked
         checkbox = get_checkbox(obs, id)
         assert checkbox.has_attr("checked")
 
-    env.close()
+    await env.close()

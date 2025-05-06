@@ -1,6 +1,6 @@
 import pytest
 
-from browsergym.core.action.python import PythonActionSet
+from browsergym.async_core.action.python import PythonActionSet
 
 
 ACTIONS_TO_TEST = [
