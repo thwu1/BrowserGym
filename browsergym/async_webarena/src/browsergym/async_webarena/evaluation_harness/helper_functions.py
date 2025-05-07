@@ -287,13 +287,15 @@ async def llm_fuzzy_match(pred: str, reference: str, question: str) -> float:
         {"role": "system", "content": "You are a helpful assistant"},
         {"role": "user", "content": message},
     ]
-    response = await async_generate_from_openai_chat_completion(
-        model="gpt-4-1106-preview",
-        messages=messages,
-        temperature=0,
-        max_tokens=768,
-        top_p=1.0,
-        context_length=0,
+    response = (
+        await async_generate_from_openai_chat_completion(
+            model="gpt-4-1106-preview",
+            messages=messages,
+            temperature=0,
+            max_tokens=768,
+            top_p=1.0,
+            context_length=0,
+        )
     ).lower()
     if "partially correct" in response or "incorrect" in response:
         return 0.0
@@ -357,13 +359,15 @@ async def llm_ua_match(pred: str, reference: str, question: str) -> float:
         {"role": "user", "content": message},
     ]
 
-    response = await async_generate_from_openai_chat_completion(
-        model="gpt-4-1106-preview",
-        messages=messages,
-        temperature=0,
-        max_tokens=768,
-        top_p=1.0,
-        context_length=0,
+    response = (
+        await async_generate_from_openai_chat_completion(
+            model="gpt-4-1106-preview",
+            messages=messages,
+            temperature=0,
+            max_tokens=768,
+            top_p=1.0,
+            context_length=0,
+        )
     ).lower()
     if "different" in response:
         return 0.0

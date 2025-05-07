@@ -2,7 +2,7 @@ import base64
 from pathlib import Path
 from typing import Literal
 import logging
-import playwright.sync_api
+import playwright.async_api
 import re
 import time
 
@@ -25,6 +25,7 @@ class Chat:
         self.chat_size = chat_size
         self.record_video_dir = record_video_dir
         self.modern = modern
+        self._use_existing_browser = False
 
         # # create a new browser, browser context and page for the chat
         # pw: playwright.sync_api.Playwright = _get_global_playwright()
@@ -48,16 +49,26 @@ class Chat:
         #     self.page.set_content(get_chatbox_modern(CHATBOX_DIR))
         # else:
         #     self.page.set_content(get_chatbox_classic(CHATBOX_DIR))
-    
-    async def setup(self):
 
-        pw: playwright.sync_api.Playwright = await _get_global_playwright()
-        self.browser = await pw.chromium.launch(
-            headless=self.headless, args=[f"--window-size={self.chat_size[0]},{self.chat_size[1]}"]
-        )
+    def set_browser(self, browser: playwright.async_api.Browser):
+        self.browser = browser
+        self._use_existing_browser = True
+
+    async def setup(self):
+        pw: playwright.async_api.Playwright = await _get_global_playwright()
+        if not self._use_existing_browser:
+            self.browser = await pw.chromium.launch(
+                headless=self.headless,
+                args=[f"--window-size={self.chat_size[0]},{self.chat_size[1]}"],
+            )
+        else:
+            logger.warning("Reusing existing browser instance in Chat")
+
         self.context = await self.browser.new_context(
             no_viewport=True,
-            record_video_dir=Path(self.record_video_dir) / "chat_video" if self.record_video_dir else None,
+            record_video_dir=(
+                Path(self.record_video_dir) / "chat_video" if self.record_video_dir else None
+            ),
             record_video_size=dict(width=self.chat_size[0], height=self.chat_size[1]),
         )
         self.page: playwright.async_api.Page = await self.context.new_page()
@@ -102,7 +113,8 @@ class Chat:
 
     async def close(self):
         await self.context.close()
-        await self.browser.close()
+        if not self._use_existing_browser:
+            await self.browser.close()
 
 
 def get_chatbox_modern(chatbox_dir) -> str:

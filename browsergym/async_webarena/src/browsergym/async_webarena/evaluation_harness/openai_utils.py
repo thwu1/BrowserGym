@@ -154,29 +154,29 @@ async def agenerate_from_openai_completion(
     return [x["choices"][0]["text"] for x in responses]
 
 
-@retry_with_exponential_backoff
-def generate_from_openai_completion(
-    prompt: str,
-    engine: str,
-    temperature: float,
-    max_tokens: int,
-    top_p: float,
-    stop_token: str | None = None,
-) -> str:
-    if "OPENAI_API_KEY" not in os.environ:
-        raise ValueError("OPENAI_API_KEY environment variable must be set when using OpenAI API.")
-    openai.api_key = os.environ["OPENAI_API_KEY"]
-    openai.organization = os.environ.get("OPENAI_ORGANIZATION", "")
-    response = OpenAI().completions.create(  # type: ignore
-        prompt=prompt,
-        engine=engine,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        top_p=top_p,
-        stop=[stop_token],
-    )
-    answer: str = response["choices"][0]["text"]
-    return answer
+# @retry_with_exponential_backoff
+# def generate_from_openai_completion(
+#     prompt: str,
+#     engine: str,
+#     temperature: float,
+#     max_tokens: int,
+#     top_p: float,
+#     stop_token: str | None = None,
+# ) -> str:
+#     if "OPENAI_API_KEY" not in os.environ:
+#         raise ValueError("OPENAI_API_KEY environment variable must be set when using OpenAI API.")
+#     openai.api_key = os.environ["OPENAI_API_KEY"]
+#     openai.organization = os.environ.get("OPENAI_ORGANIZATION", "")
+#     response = OpenAI().completions.create(  # type: ignore
+#         prompt=prompt,
+#         engine=engine,
+#         temperature=temperature,
+#         max_tokens=max_tokens,
+#         top_p=top_p,
+#         stop=[stop_token],
+#     )
+#     answer: str = response["choices"][0]["text"]
+#     return answer
 
 
 async def _throttled_openai_chat_completion_acreate(

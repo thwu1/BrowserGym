@@ -15,7 +15,7 @@ ALL_WEBARENA_TASK_IDS = []
 
 # register all WebArena benchmark
 for task_id in config.TASK_IDS:
-    gym_id = f"async_webarena.{task_id}"
+    gym_id = f"webarena.{task_id}"
     register_task(
         gym_id,
         task.GenericWebArenaTask,

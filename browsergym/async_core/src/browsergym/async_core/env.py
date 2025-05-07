@@ -171,6 +171,11 @@ class BrowserEnv(gym.Env, ABC):
 
         # action space
         self.action_space = Unicode()
+        self._use_existing_browser = False
+
+    def set_browser(self, browser: playwright.async_api.Browser):
+        self.browser = browser
+        self._use_existing_browser = True
 
     async def close(self):
         # stop the task
@@ -187,7 +192,8 @@ class BrowserEnv(gym.Env, ABC):
             self.context = None
         # close the browser
         if self.browser:
-            await self.browser.close()
+            if not self._use_existing_browser:
+                await self.browser.close()
             self.browser = None
 
     async def reset(self, seed=None, *args, **kwargs):
@@ -197,8 +203,9 @@ class BrowserEnv(gym.Env, ABC):
         if self.task:
             await self.task.teardown()
             await self.context.close()
-            self.chat.close()
-            await self.browser.close()
+            await self.chat.close()
+            if not self._use_existing_browser:
+                await self.browser.close()
 
         # create a new task
         self.task = self.task_entrypoint(seed=seed, **self.task_kwargs)
@@ -229,17 +236,20 @@ class BrowserEnv(gym.Env, ABC):
         pw.selectors.set_test_id_attribute(BROWSERGYM_ID_ATTRIBUTE)
 
         # create a new browser
-        self.browser = await pw.chromium.launch(
-            headless=self.headless,
-            slow_mo=slow_mo,
-            args=(
-                [f"--window-size={viewport['width']},{viewport['height']}"]
-                if self.resizeable_window
-                else None
-            ),
-            # will raise an Exception if above args are overriden
-            **self.pw_chromium_kwargs,
-        )
+        if not self._use_existing_browser:
+            self.browser = await pw.chromium.launch(
+                headless=self.headless,
+                slow_mo=slow_mo,
+                args=(
+                    [f"--window-size={viewport['width']},{viewport['height']}"]
+                    if self.resizeable_window
+                    else None
+                ),
+                # will raise an Exception if above args are overriden
+                **self.pw_chromium_kwargs,
+            )
+        else:
+            logger.warning("Reusing existing browser instance")
 
         # create a new browser context for pages
         self.context = await self.browser.new_context(
@@ -294,6 +304,8 @@ document.addEventListener("visibilitychange", () => {
             chat_size=(500, max(viewport["height"], 800)),
             record_video_dir=self.record_video_dir,
         )
+        if self._use_existing_browser:
+            self.chat.set_browser(self.browser)
         await self.chat.setup()
         # create a new page
         self.page = await self.context.new_page()
