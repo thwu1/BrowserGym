@@ -1,11 +1,20 @@
 install:
 	@echo "--- 🚀 Installing project dependencies ---"
-	pip install -e ./browsergym/core -e ./browsergym/miniwob -e ./browsergym/webarena -e ./browsergym/visualwebarena/ -e ./browsergym/experiments -e ./browsergym/assistantbench -e ./browsergym/
+	uv pip install -e ./browsergym/core -e ./browsergym/miniwob -e ./browsergym/webarena -e ./browsergym/visualwebarena/ -e ./browsergym/experiments -e ./browsergym/assistantbench -e ./browsergym/ -e ./browsergym/async_core/
+	uv pip install -e ./browsergym/async_core/ -e ./browsergym/async_webarena/
+	playwright install chromium
+
+sync:
+	uv pip install -e ./browsergym/core -e ./browsergym/miniwob -e ./browsergym/webarena -e ./browsergym/visualwebarena/ -e ./browsergym/experiments -e ./browsergym/assistantbench -e ./browsergym/
+	playwright install chromium
+
+async:
+	uv pip install -e ./browsergym/async_core/ -e ./browsergym/async_webarena/
 	playwright install chromium
 
 install-demo:
 	@echo "--- 🚀 Installing demo dependencies ---"
-	pip install -r demo_agent/requirements.txt
+	uv pip install -r demo_agent/requirements.txt
 	playwright install chromium
 
 demo:
